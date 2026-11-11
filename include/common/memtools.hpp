@@ -6,6 +6,7 @@
 
 #define MAXIMUM_FILENAME_LENGTH 255 
 #define SystemExtendedHandleInformation 64
+#define SystemBigPoolInformation 66
 #define STATUS_INFO_LENGTH_MISMATCH ((NTSTATUS)0xC0000004L)
 #ifndef NT_SUCCESS
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
@@ -188,6 +189,27 @@ typedef struct _SYSTEM_HANDLE_INFORMATION_EX
 } SYSTEM_HANDLE_INFORMATION_EX,
 * PSYSTEM_HANDLE_INFORMATION_EX;
 
+
+// 定义必要的结构体（如果未包含在 winternl.h 中）
+typedef struct _SYSTEM_BIGPOOL_ENTRY {
+	union {
+		PVOID VirtualAddress;
+		ULONG_PTR NonPaged : 1;
+	};
+	SIZE_T SizeInBytes;
+	union {
+		UCHAR Tag[4];
+		ULONG TagUlong;
+	};
+	// Padding 隐含在此处
+} SYSTEM_BIGPOOL_ENTRY, * PSYSTEM_BIGPOOL_ENTRY;
+
+typedef struct _SYSTEM_BIGPOOL_INFORMATION {
+	ULONG Count;
+	SYSTEM_BIGPOOL_ENTRY AllocatedInfo[1];
+} SYSTEM_BIGPOOL_INFORMATION, * PSYSTEM_BIGPOOL_INFORMATION;
+
+
 ///////////////////////////
 
 typedef struct stackinfo {
@@ -204,6 +226,8 @@ namespace exploit
 		unsigned long long ulGetStackLimitWithInfo(pStackInfo stackinfo);
 		unsigned long long ulUseStackInfo(wchar_t ProcName[]);
 		bool bFindHandleObject(DWORD targetPid, ULONG_PTR targetHandle, ULONG_PTR result);
+		unsigned long long ulFindKernelPoolAddress(ULONG targetTag, SIZE_T targetSize, PUINT64 outAddresses, ULONG maxCount);
+		void hexdump(const void* data, ULONG size);
 	} // namespace memtools
 
 } // namespace exploit
