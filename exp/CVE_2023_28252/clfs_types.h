@@ -323,7 +323,23 @@ typedef struct _CLFS_CLIENT_CONTEXT {
 } CLFS_CLIENT_CONTEXT, * PCLFS_CLIENT_CONTEXT;
 
 // 前向声明
-struct _CClfsContainer;
+typedef struct _CClfsContainer {
+    const VOID* vftable;         // +0x000
+    ULONG64          cbContainerSize; // +0x008  容器当前大小（字节）
+    PVOID            pUnknown10;      // +0x010
+    PVOID            pUnknown18;      // +0x018
+    HANDLE           hContainer;      // +0x020  IoCreateFileEx 得到的句柄
+    PVOID            pEvent;          // +0x028  KEVENT
+    struct _FILE_OBJECT* pFileObject; // +0x030  IoGetRelatedDeviceObject 的对象
+    volatile LONG    cRef;            // +0x038  AddRef/Release
+    ULONG            fFlags;          // +0x040
+    ULONG            cbRawSector;     // +0x044  构造时 = 0x1000
+    PVOID            pUnknown48;      // +0x048
+    ULONG            ulUnknown50;     // +0x050
+    /* +0x058 .. +0x06F 未知 */
+    CHAR            unknown[0x20];
+    struct _CClfsContainer* pSelf;    // +0x070  构造时 = this
+} CClfsContainer, * PCClfsContainer;
 struct _CClfsBaseFile;
 
 // ============================================================

