@@ -1,7 +1,7 @@
 <!--
  * @Date: 2026-11-09 08:45:59
  * @LastEditors: joe1sn joe1sn23333@gmail.com
- * @LastEditTime: 2026-11-12 15:06:26
+ * @LastEditTime: 2026-11-12 15:07:39
  * @FilePath: \CVE_2023_28252\README.md
 -->
 # CVE_2023_28252
@@ -21,9 +21,7 @@ poc and exp for CVE_2023_28252, related to my analyze, use cmake.
 
 ---
 
- Windows 通用日志组件特权提升漏洞，漏洞点位于`clfs.sys`，该漏洞仅在win11版本上有效，具体如下：
-
-![image-20260520105307855](./assets/uploadsimage-20260520105307855.png)
+ Windows 通用日志组件特权提升漏洞，漏洞点位于`clfs.sys`，该漏洞仅在win11版本上有效
 
 我复现的环境是
 
