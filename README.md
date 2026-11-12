@@ -1,9 +1,3 @@
-<!--
- * @Date: 2026-11-09 08:45:59
- * @LastEditors: joe1sn joe1sn23333@gmail.com
- * @LastEditTime: 2026-11-12 15:07:39
- * @FilePath: \CVE_2023_28252\README.md
--->
 # CVE_2023_28252
 
 poc and exp for CVE_2023_28252, related to my analyze, use cmake.
