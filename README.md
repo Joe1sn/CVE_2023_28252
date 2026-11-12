@@ -1,3 +1,9 @@
+<!--
+ * @Date: 2026-11-09 08:45:59
+ * @LastEditors: joe1sn joe1sn23333@gmail.com
+ * @LastEditTime: 2026-11-12 15:06:26
+ * @FilePath: \CVE_2023_28252\README.md
+-->
 # CVE_2023_28252
 
 poc and exp for CVE_2023_28252, related to my analyze, use cmake.
@@ -7,7 +13,7 @@ poc and exp for CVE_2023_28252, related to my analyze, use cmake.
 关于分析文章：
 
 - 微信公众号：https://mp.weixin.qq.com/s/QgsGTgq-V7zxq3_oGdjdGA
-- 我的博客：https://joe1sn.eu.org/2026/05/23/CVE-2023-21768
+- 我的博客：https://joe1sn.eu.org/2026/11/12/CVE-2023-28252/
 
 或许我们的微信公众号< **不止Sec** >会有你更多感兴趣的内容
 
