@@ -1,7 +1,7 @@
 /*
  * @Date: 2026-11-09 08:46:27
  * @LastEditors: joe1sn joe1sn23333@gmail.com
- * @LastEditTime: 2026-11-11 19:08:41
+ * @LastEditTime: 2026-11-12 14:14:33
  * @FilePath: \CVE_2023_28252\exp\CVE_2023_28252\def.hpp
  */
 #pragma once
@@ -76,6 +76,9 @@ namespace CVE_2023_28252
     bool fixCRCFile(std::wstring filepath);
     void getVirtualFunction();
     void getVirtualAddress();
+
+    void craftTriggerFile(std::wstring filepath);
+    void craftSprayFile(std::wstring filepath);
 
     inline constexpr DWORD BaseBlockSize = 0x7a00;
     inline constexpr DWORD NormalBlockSize = 0x400;
