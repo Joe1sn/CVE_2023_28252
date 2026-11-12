@@ -1,33 +1,29 @@
-<!--
- * @Date: 2026-11-03 15:11:01
- * @LastEditors: joe1sn joe1sn23333@gmail.com
- * @LastEditTime: 2026-11-03 15:12:29
- * @FilePath: \panicake\README.md
--->
-# panicake
-用于自用的 Windows 内核漏洞/实验/概念验证/研究框架
+# CVE_2023_28252
 
-windows kernel vuln/exp/poc/research framework for selfuse
+poc and exp for CVE_2023_28252, related to my analyze, use cmake.
 
-基于本人研究的，自用版本的 windows 内核漏洞利用/PoC 
+关于CVE_2023_28252复现的调试代码、poc和exp文件，使用cmake编写。
 
-A collection of Windows kernel exploits/PoCs, developed for my own research and personal use.
+关于分析文章：
 
-| CVE ID               | Winver                             | Module      | Source                                   |
-| -------------------- | ---------------------------------- | ----------- | ---------------------------------------- |
-| CVE-2026-40369       | Version 25H2 (OS Build 26200.4946) | ntoskrl.exe | https://github.com/Joe1sn/CVE_2026_40369 |
-| CVE-2023-21768       | Version 22H2 (OS Build 22621.1)    | afd.sys     | https://github.com/Joe1sn/CVE_2023_21768 |
-| CVE_2021_40449       | Version 1809(OS Build 17763.737)   | win32k.sys  | https://github.com/Joe1sn/CVE_2021_40449 |
-| CVE-2021-1732        | Version 1809(OS Build 17763.737)   | win32k.sys  | https://github.com/Joe1sn/CVE_2021_1732  |
+- 微信公众号：https://mp.weixin.qq.com/s/QgsGTgq-V7zxq3_oGdjdGA
+- 我的博客：https://joe1sn.eu.org/2026/05/23/CVE-2023-21768
 
-关于分支：
+或许我们的微信公众号< **不止Sec** >会有你更多感兴趣的内容
 
-About the branches:
+![qrcode_for_gh_36eb51c71ac6_1280](./assets/qrcode_for_gh_36eb51c71ac6_1280.jpg)
 
-- `main`：开发框架，便于后续的漏洞研究
+---
 
-  `main`: A development framework designed to facilitate ongoing vulnerability research.
+ Windows 通用日志组件特权提升漏洞，漏洞点位于`clfs.sys`，该漏洞仅在win11版本上有效，具体如下：
 
-- `exploit`：自写的exp迁移
+![image-20260520105307855](./assets/uploadsimage-20260520105307855.png)
 
-  `exploit`: A repository for my custom-written exploits.
+我复现的环境是
+
+![image-20260520141919553](./assets/uploadsimage-20260520141919553.png)
+
+最终效果
+
+![image-20261112141051207](./assets/image-20261112141051207.png)
+
